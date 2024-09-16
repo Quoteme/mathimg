@@ -14,6 +14,15 @@ fn main() {
         println!("  --packages=\"pkg1,pkg2\"  Comma-separated list of LaTeX packages to include (default: amsmath).");
         println!("  --output=filename.svg    Specify the output SVG file path (default: /tmp/equation.svg).");
         println!("  --help                   Display this help message.");
+        println!("\nExamples:");
+        println!(
+            "  {} \"\\$\\sqrt{{5}}\\$\"                # Inline math mode",
+            args[0]
+        );
+        println!(
+            "  {} \"\\$\\$\\frac{{a}}{{b}}\\$\\$\"           # Display math mode",
+            args[0]
+        );
         std::process::exit(0);
     }
 
@@ -42,9 +51,9 @@ fn main() {
     for pkg in packages.iter() {
         latex_content.push_str(&format!("\\usepackage{{{}}}\n", pkg));
     }
-    latex_content.push_str("\\begin{document}\n\\[\n");
+    latex_content.push_str("\\begin{document}\n");
     latex_content.push_str(equation);
-    latex_content.push_str("\n\\]\n\\end{document}\n");
+    latex_content.push_str("\n\\end{document}\n");
 
     // Write LaTeX content to a temporary file
     let latex_file_path = "/tmp/equation.tex";
@@ -61,10 +70,10 @@ fn main() {
         std::process::exit(1);
     }
 
-    // Convert PDF to SVG using dvisvgm
+    // Convert PDF to SVG using dvisvgm (from PDF, not DVI)
     let pdf_file_path = "/tmp/equation.pdf";
     let output_svg = output_file;
-    let output = run_command("dvisvgm", &[pdf_file_path, "-o", output_svg]);
+    let output = run_command("dvisvgm", &[pdf_file_path, "--pdf", "-n", "-o", output_svg]);
 
     if !output.status.success() {
         eprintln!("dvisvgm error: {:?}", output);
