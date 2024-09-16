@@ -12,15 +12,20 @@ fn main() {
         println!("Usage: {} [OPTIONS] equation\n", args[0]);
         println!("Options:");
         println!("  --packages=\"pkg1,pkg2\"  Comma-separated list of LaTeX packages to include (default: amsmath).");
-        println!("  --output=filename.svg    Specify the output SVG file path (default: /tmp/equation.svg).");
+        println!("  --output=filename        Specify the output file path (default: /tmp/equation.svg or /tmp/equation.png).");
+        println!("  --png                    Export as PNG instead of SVG.");
         println!("  --help                   Display this help message.");
         println!("\nExamples:");
         println!(
-            "  {} \"\\$\\sqrt{{5}}\\$\"                # Inline math mode",
+            "  {} \"$\\sqrt{{5}}$\"                # Inline math mode",
             args[0]
         );
         println!(
-            "  {} \"\\$\\$\\frac{{a}}{{b}}\\$\\$\"           # Display math mode",
+            "  {} \"$$\\frac{{a}}{{b}}$$\"           # Display math mode",
+            args[0]
+        );
+        println!(
+            "  {} --png \"$\\sqrt{{5}}$\"           # Export as PNG",
             args[0]
         );
         std::process::exit(0);
@@ -39,9 +44,20 @@ fn main() {
     );
 
     let output_file_arg = args.iter().find(|arg| arg.starts_with("--output="));
-    let output_file = output_file_arg.map_or("/tmp/equation.svg", |arg| {
+    let mut output_file = output_file_arg.map_or("/tmp/equation.svg", |arg| {
         arg.strip_prefix("--output=").unwrap()
     });
+
+    let as_png = args.contains(&"--png".to_string());
+    if as_png {
+        if !output_file.ends_with(".png") {
+            output_file = "/tmp/equation.png";
+        }
+    } else {
+        if !output_file.ends_with(".svg") {
+            output_file = "/tmp/equation.svg";
+        }
+    }
 
     // Get the equation
     let equation = args.last().unwrap();
@@ -70,17 +86,40 @@ fn main() {
         std::process::exit(1);
     }
 
-    // Convert PDF to SVG using dvisvgm (from PDF, not DVI)
-    let pdf_file_path = "/tmp/equation.pdf";
-    let output_svg = output_file;
-    let output = run_command("dvisvgm", &[pdf_file_path, "--pdf", "-n", "-o", output_svg]);
+    // Convert PDF to SVG or PNG
+    if as_png {
+        // Convert PDF to PNG using pdftoppm
+        let pdf_file_path = "/tmp/equation.pdf";
+        let output_png = output_file;
+        let output = run_command(
+            "pdftoppm",
+            &[
+                "-png",
+                "-singlefile",
+                pdf_file_path,
+                &output_png.trim_end_matches(".png"),
+            ],
+        );
 
-    if !output.status.success() {
-        eprintln!("dvisvgm error: {:?}", output);
-        std::process::exit(1);
+        if !output.status.success() {
+            eprintln!("pdftoppm error: {:?}", output);
+            std::process::exit(1);
+        }
+
+        println!("PNG file created at: {}", output_png);
+    } else {
+        // Convert PDF to SVG using dvisvgm
+        let pdf_file_path = "/tmp/equation.pdf";
+        let output_svg = output_file;
+        let output = run_command("dvisvgm", &[pdf_file_path, "--pdf", "-n", "-o", output_svg]);
+
+        if !output.status.success() {
+            eprintln!("dvisvgm error: {:?}", output);
+            std::process::exit(1);
+        }
+
+        println!("SVG file created at: {}", output_svg);
     }
-
-    println!("SVG file created at: {}", output_svg);
 }
 
 /// Helper function to run a command and capture its output
