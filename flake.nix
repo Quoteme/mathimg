@@ -16,10 +16,10 @@
       in
       rec {
         defaultPackage = packages.mathimg;
-        packages.mathimg = pkgs.buildRustPackage {
-          pname = "mathimg";
+        packages.mathimg = pkgs.rustPlatform.buildRustPackage {
+          name = "mathimg";
           src = ./.;
-          cargoSha256 = "";
+          cargoHash = "sha256-iSN3JpkdjNL/W30PT+/Vz2nlhuwwqcQcyq27vb7zShk=";
         };
       }
     );
